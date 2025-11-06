@@ -3,8 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Optional: Type definitions for better TypeScript support
 export type Database = {
   public: {
     Tables: {
@@ -17,8 +22,6 @@ export type Database = {
           user_id: string;
           created_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['categories']['Row'], 'id' | 'created_at'>;
-        Update: Partial<Database['public']['Tables']['categories']['Insert']>;
       };
       transactions: {
         Row: {
@@ -33,8 +36,6 @@ export type Database = {
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['transactions']['Row'], 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Database['public']['Tables']['transactions']['Insert']>;
       };
     };
   };

@@ -67,11 +67,11 @@ export const Dashboard = ({ transactions, categories }: DashboardProps) => {
   }, [transactions]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
+  return new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+  }).format(amount);
+};
 
   return (
     <div className="space-y-6">

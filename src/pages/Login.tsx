@@ -16,9 +16,9 @@ export const Login = () => {
     const success = await login(email, password);
     
     if (success) {
-      navigate('/dashboard');
+      navigate('/');
     } else {
-      setError('Invalid email or password. Use demo@example.com / password or your signed up credentials.');
+      setError('Invalid email or password. Please try again.');
     }
   };
 
@@ -106,18 +106,6 @@ export const Login = () => {
               <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
                 Sign up
               </Link>
-            </div>
-
-            {/* Demo credentials */}
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-600 text-center">
-                <strong>Demo credentials:</strong><br />
-                Email: demo@example.com<br />
-                Password: password
-              </p>
-              <p className="text-xs text-gray-500 text-center mt-2">
-                Or sign up with any email (password can be anything for demo)
-              </p>
             </div>
           </form>
         </div>

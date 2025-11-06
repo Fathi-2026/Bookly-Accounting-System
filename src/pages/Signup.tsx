@@ -38,9 +38,9 @@ export const Signup = () => {
     const success = await signup(formData);
     
     if (success) {
-      navigate('/dashboard');
+      navigate('/');
     } else {
-      setError('Failed to create account. Please try again.');
+      setError('Failed to create account. This email might already be registered.');
     }
   };
 

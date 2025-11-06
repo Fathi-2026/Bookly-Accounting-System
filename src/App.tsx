@@ -1,4 +1,3 @@
-// Add these imports at the top
 import { AddTransaction } from "@/components/AddTransaction";
 import { TransactionsTable } from "@/components/TransactionsTable"; 
 import { Reports } from "@/components/Reports";
@@ -18,17 +17,34 @@ const queryClient = new QueryClient();
 
 // Wrapper components that pass the required props
 const AddTransactionWrapper = () => {
-  const { addTransaction, categories } = useTransactions();
+  const { addTransaction, categories, isLoading } = useTransactions();
+  
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading categories...</div>;
+  }
+  
   return <AddTransaction onAddTransaction={addTransaction} categories={categories} />;
 };
 
 const TransactionsTableWrapper = () => {
-  const { transactions, categories } = useTransactions();
-  return <TransactionsTable transactions={transactions} categories={categories} />;
+  const { transactions, categories, deleteTransaction, isLoading } = useTransactions();
+  
+  if (isLoading) return <div>Loading...</div>;
+  
+  return (
+    <TransactionsTable 
+      transactions={transactions} 
+      categories={categories}
+      onDeleteTransaction={deleteTransaction}
+    />
+  );
 };
 
 const ReportsWrapper = () => {
-  const { transactions, categories } = useTransactions();
+  const { transactions, categories, isLoading } = useTransactions();
+  
+  if (isLoading) return <div>Loading...</div>;
+  
   return <Reports transactions={transactions} categories={categories} />;
 };
 
@@ -105,18 +121,20 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

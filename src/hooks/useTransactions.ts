@@ -1,4 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 export interface Transaction {
   id: string;
@@ -8,6 +10,8 @@ export interface Transaction {
   category: string;
   type: "income" | "expense";
   description?: string;
+  user_id: string;
+  created_at: string;
 }
 
 export interface Category {
@@ -15,91 +19,185 @@ export interface Category {
   name: string;
   color: string;
   type: "income" | "expense" | "both";
+  user_id?: string;
 }
 
-const defaultCategories: Category[] = [
-  { id: "1", name: "Freelance Work", color: "bg-green-500", type: "income" },
-  { id: "2", name: "Consulting", color: "bg-emerald-500", type: "income" },
-  { id: "3", name: "Product Sales", color: "bg-teal-500", type: "income" },
-  { id: "4", name: "Office Supplies", color: "bg-blue-500", type: "expense" },
-  { id: "5", name: "Software", color: "bg-indigo-500", type: "expense" },
-  { id: "6", name: "Marketing", color: "bg-purple-500", type: "expense" },
-  { id: "7", name: "Travel", color: "bg-pink-500", type: "expense" },
-  { id: "8", name: "Meals", color: "bg-orange-500", type: "expense" },
-];
-
-const dummyTransactions: Transaction[] = [
-  {
-    id: "1",
-    title: "Website Development Project",
-    amount: 2500,
-    date: "2024-06-01",
-    category: "Freelance Work",
-    type: "income",
-    description: "Client website project completion"
-  },
-  {
-    id: "2",
-    title: "Adobe Creative Suite",
-    amount: 52.99,
-    date: "2024-06-01",
-    category: "Software",
-    type: "expense",
-    description: "Monthly subscription"
-  },
-  {
-    id: "3",
-    title: "Business Consultation",
-    amount: 800,
-    date: "2024-05-28",
-    category: "Consulting",
-    type: "income",
-    description: "Strategy consultation session"
-  },
-  {
-    id: "4",
-    title: "Office Chair",
-    amount: 299,
-    date: "2024-05-25",
-    category: "Office Supplies",
-    type: "expense",
-    description: "Ergonomic office chair"
-  },
-  {
-    id: "5",
-    title: "E-book Sales",
-    amount: 1200,
-    date: "2024-05-20",
-    category: "Product Sales",
-    type: "income",
-    description: "Digital product sales"
-  },
-  {
-    id: "6",
-    title: "Google Ads",
-    amount: 150,
-    date: "2024-05-15",
-    category: "Marketing",
-    type: "expense",
-    description: "Online advertising campaign"
-  },
-];
-
 export const useTransactions = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>(dummyTransactions);
-  const [categories] = useState<Category[]>(defaultCategories);
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const addTransaction = (transaction: Omit<Transaction, "id">) => {
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: Date.now().toString(),
+  // Fetch transactions from Supabase
+  const fetchTransactions = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch categories from Supabase
+  const fetchCategories = async () => {
+    if (!user) return;
+
+    try {
+      console.log('Fetching categories for user:', user.id);
+      
+      const { data: userCategories, error: userError } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('type');
+
+      console.log('Raw categories from DB:', userCategories);
+
+      if (userError) {
+        console.error('Database error:', userError);
+        throw userError;
+      }
+
+      if (userCategories && userCategories.length > 0) {
+        console.log('Setting categories:', userCategories);
+        setCategories(userCategories);
+      } else {
+        console.log('No categories found in database');
+        // Create default categories if none exist
+        const defaultCategories = [
+          { name: "Salary", color: "bg-green-500", type: "income" },
+          { name: "Freelance Work", color: "bg-emerald-500", type: "income" },
+          { name: "Business Income", color: "bg-teal-500", type: "income" },
+          { name: "Investments", color: "bg-blue-500", type: "income" },
+          { name: "Utilities", color: "bg-yellow-500", type: "expense" },
+          { name: "Transportation", color: "bg-orange-500", type: "expense" },
+          { name: "Entertainment", color: "bg-purple-500", type: "expense" },
+          { name: "Healthcare", color: "bg-red-500", type: "expense" },
+          { name: "Dining Out", color: "bg-pink-500", type: "expense" },
+          { name: "Shopping", color: "bg-indigo-500", type: "expense" },
+        ];
+
+        const categoriesToInsert = defaultCategories.map(cat => ({
+          ...cat,
+          user_id: user.id
+        }));
+
+        const { data: newCategories, error: insertError } = await supabase
+          .from('categories')
+          .insert(categoriesToInsert)
+          .select();
+
+        if (insertError) throw insertError;
+        
+        console.log('Created default categories:', newCategories);
+        setCategories(newCategories || []);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      // Fallback categories
+      const fallbackCategories = [
+        { id: "1", name: "Salary", color: "bg-green-500", type: "income" },
+        { id: "2", name: "Freelance Work", color: "bg-emerald-500", type: "income" },
+        { id: "3", name: "Business Income", color: "bg-teal-500", type: "income" },
+        { id: "4", name: "Utilities", color: "bg-yellow-500", type: "expense" },
+        { id: "5", name: "Transportation", color: "bg-orange-500", type: "expense" },
+        { id: "6", name: "Entertainment", color: "bg-purple-500", type: "expense" },
+        { id: "7", name: "Healthcare", color: "bg-red-500", type: "expense" },
+        { id: "8", name: "Dining Out", color: "bg-pink-500", type: "expense" },
+      ];
+      setCategories(fallbackCategories);
+    }
+  };
+
+  // Add transaction to Supabase
+  const addTransaction = async (transaction: Omit<Transaction, "id" | "user_id" | "created_at">) => {
+    if (!user) throw new Error("User must be logged in");
+
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert([
+          {
+            ...transaction,
+            user_id: user.id,
+            created_at: new Date().toISOString(),
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setTransactions(prev => [data, ...prev]);
+      return data;
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      throw error;
+    }
+  };
+
+  // Delete transaction from Supabase
+  const deleteTransaction = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTransactions(prev => prev.filter(t => t.id !== id));
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      throw error;
+    }
+  };
+
+  // Set up real-time subscription
+  useEffect(() => {
+    if (!user) return;
+
+    fetchTransactions();
+    fetchCategories();
+
+    const subscription = supabase
+      .channel('transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setTransactions(prev => [payload.new as Transaction, ...prev]);
+          } else if (payload.eventType === 'DELETE') {
+            setTransactions(prev => prev.filter(t => t.id !== payload.old.id));
+          } else if (payload.eventType === 'UPDATE') {
+            setTransactions(prev => 
+              prev.map(t => t.id === payload.new.id ? payload.new as Transaction : t)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
     };
-    setTransactions(prev => [newTransaction, ...prev]);
-  };
-
-  const deleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
-  };
+  }, [user]);
 
   const summary = useMemo(() => {
     const totalIncome = transactions
@@ -123,5 +221,6 @@ export const useTransactions = () => {
     deleteTransaction,
     categories,
     summary,
+    isLoading,
   };
 };

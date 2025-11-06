@@ -1,10 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-interface User {
-  firstName: string;
-  lastName: string;
-  email: string;
-}
+import { supabase } from '@/lib/supabase';
+import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
@@ -20,89 +16,98 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing session on app start
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    const isAuthenticated = localStorage.getItem('isAuthenticated');
-    
-    if (isAuthenticated === 'true' && savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const signUp = async (userData: { firstName: string; lastName: string; email: string; password: string }) => {
     setIsLoading(true);
-    
-    // Simulate API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Demo credentials
-        if (email === 'demo@example.com' && password === 'password') {
-          const userData = { firstName: 'Demo', lastName: 'User', email };
-          setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
-          localStorage.setItem('isAuthenticated', 'true');
-          setIsLoading(false);
-          resolve(true);
-        } 
-        // Check if user signed up
-        else {
-          const savedUser = localStorage.getItem('user');
-          if (savedUser) {
-            const userData = JSON.parse(savedUser);
-            if (userData.email === email && password === 'password') { // For demo, all passwords are 'password'
-              setUser(userData);
-              localStorage.setItem('isAuthenticated', 'true');
-              setIsLoading(false);
-              resolve(true);
-            } else {
-              setIsLoading(false);
-              resolve(false);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+      });
+
+      if (error) throw error;
+      
+      // Create user profile in your profiles table
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            { 
+              id: data.user.id, 
+              first_name: userData.firstName, 
+              last_name: userData.lastName,
+              email: userData.email
             }
-          } else {
-            setIsLoading(false);
-            resolve(false);
-          }
-        }
-      }, 1000);
-    });
+          ]);
+
+        if (profileError) console.error('Profile creation error:', profileError);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Signup error:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const signup = async (userData: { firstName: string; lastName: string; email: string; password: string }): Promise<boolean> => {
+  const signIn = async (email: string, password: string) => {
     setIsLoading(true);
-    
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Save user data (in real app, this would go to your backend)
-        const newUser = {
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          email: userData.email
-        };
-        
-        setUser(newUser);
-        localStorage.setItem('user', JSON.stringify(newUser));
-        localStorage.setItem('isAuthenticated', 'true');
-        setIsLoading(false);
-        resolve(true);
-      }, 1500);
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('isAuthenticated');
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login: signIn, 
+      signup: signUp, 
+      logout, 
+      isLoading 
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
+// ✅ ADD THIS MISSING HOOK:
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

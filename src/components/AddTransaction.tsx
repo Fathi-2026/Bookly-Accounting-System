@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -19,6 +18,10 @@ interface AddTransactionProps {
 
 export const AddTransaction = ({ onAddTransaction, categories }: AddTransactionProps) => {
   const navigate = useNavigate();
+  
+  // Debug logs
+  console.log('All categories received:', categories);
+  
   const [formData, setFormData] = useState({
     title: "",
     amount: "",
@@ -28,7 +31,19 @@ export const AddTransaction = ({ onAddTransaction, categories }: AddTransactionP
     description: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Filter categories based on transaction type
+  const filteredCategories = categories.filter(category => {
+    if (formData.type === "income") {
+      return category.type === "income" || category.type === "both";
+    } else {
+      return category.type === "expense" || category.type === "both";
+    }
+  });
+
+  // Debug log for filtered categories
+  console.log('Filtered categories for', formData.type, ':', filteredCategories);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.title || !formData.amount || !formData.category) {
@@ -50,26 +65,30 @@ export const AddTransaction = ({ onAddTransaction, categories }: AddTransactionP
       return;
     }
 
-    onAddTransaction({
-      title: formData.title,
-      amount,
-      date: formData.date,
-      category: formData.category,
-      type: formData.type,
-      description: formData.description,
-    });
+    try {
+      await onAddTransaction({
+        title: formData.title,
+        amount,
+        date: formData.date,
+        category: formData.category,
+        type: formData.type,
+        description: formData.description,
+      });
 
-    toast({
-      title: "Success",
-      description: "Transaction added successfully!",
-    });
+      toast({
+        title: "Success",
+        description: "Transaction added successfully!",
+      });
 
-    navigate("/");
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add transaction. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
-
-  const filteredCategories = categories.filter(
-    cat => cat.type === formData.type || cat.type === "both"
-  );
 
   return (
     <div className="space-y-6">
@@ -136,7 +155,7 @@ export const AddTransaction = ({ onAddTransaction, categories }: AddTransactionP
             <div>
               <Label htmlFor="amount">Amount *</Label>
               <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">KSh</span>
                 <Input
                   id="amount"
                   type="number"
@@ -145,7 +164,7 @@ export const AddTransaction = ({ onAddTransaction, categories }: AddTransactionP
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                   placeholder="0.00"
-                  className="pl-7"
+                  className="pl-12"
                   required
                 />
               </div>
@@ -172,7 +191,11 @@ export const AddTransaction = ({ onAddTransaction, categories }: AddTransactionP
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
               >
                 <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select a category" />
+                  <SelectValue placeholder={
+                    filteredCategories.length === 0 
+                      ? "No categories available" 
+                      : "Select a category"
+                  } />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredCategories.map((category) => (
@@ -185,6 +208,11 @@ export const AddTransaction = ({ onAddTransaction, categories }: AddTransactionP
                   ))}
                 </SelectContent>
               </Select>
+              {filteredCategories.length === 0 && (
+                <p className="text-sm text-red-500 mt-1">
+                  No categories found for {formData.type} transactions.
+                </p>
+              )}
             </div>
 
             {/* Description */}
