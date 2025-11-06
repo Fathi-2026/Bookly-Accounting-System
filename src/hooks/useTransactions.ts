@@ -163,6 +163,32 @@ export const useTransactions = () => {
     }
   };
 
+  // Update transaction in Supabase
+  const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
+    if (!user) throw new Error("User must be logged in");
+
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setTransactions(prev => 
+        prev.map(t => t.id === id ? { ...t, ...updates } : t)
+      );
+      
+      return data;
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      throw error;
+    }
+  };
+
   // Set up real-time subscription
   useEffect(() => {
     if (!user) return;
@@ -219,6 +245,7 @@ export const useTransactions = () => {
     transactions,
     addTransaction,
     deleteTransaction,
+    updateTransaction,
     categories,
     summary,
     isLoading,

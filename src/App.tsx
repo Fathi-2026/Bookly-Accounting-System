@@ -1,4 +1,5 @@
 import { AddTransaction } from "@/components/AddTransaction";
+import { EditTransaction } from "@/components/EditTransaction";
 import { TransactionsTable } from "@/components/TransactionsTable"; 
 import { Reports } from "@/components/Reports";
 import { Toaster } from "@/components/ui/toaster";
@@ -24,6 +25,20 @@ const AddTransactionWrapper = () => {
   }
   
   return <AddTransaction onAddTransaction={addTransaction} categories={categories} />;
+};
+
+const EditTransactionWrapper = () => {
+  const { transactions, categories, updateTransaction, isLoading } = useTransactions();
+  
+  if (isLoading) return <div>Loading...</div>;
+  
+  return (
+    <EditTransaction 
+      transactions={transactions} 
+      categories={categories}
+      onUpdateTransaction={updateTransaction}
+    />
+  );
 };
 
 const TransactionsTableWrapper = () => {
@@ -113,6 +128,7 @@ const AppRoutes = () => {
       
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/add-transaction" element={<ProtectedRoute><AddTransactionWrapper /></ProtectedRoute>} />
+      <Route path="/edit-transaction/:id" element={<ProtectedRoute><EditTransactionWrapper /></ProtectedRoute>} />
       <Route path="/transactions" element={<ProtectedRoute><TransactionsTableWrapper /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><ReportsWrapper /></ProtectedRoute>} />
       
