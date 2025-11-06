@@ -16,26 +16,100 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Function to create or ensure user profile exists
+  const ensureUserProfile = async (userId: string, userEmail: string | undefined, firstName?: string, lastName?: string) => {
+    try {
+      // Check if profile already exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle(); // Use maybeSingle to avoid throwing error if no profile
+
+      if (checkError) {
+        console.error('Error checking profile:', checkError);
+        return false;
+      }
+
+      if (!existingProfile) {
+        console.log('Creating missing profile for user:', userId);
+        
+        const profileData = { 
+          id: userId, 
+          first_name: firstName || 'User',
+          last_name: lastName || 'Account', 
+          email: userEmail || 'unknown@example.com'
+        };
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([profileData]);
+
+        if (profileError) {
+          console.error('Failed to create profile:', profileError);
+          return false;
+        }
+
+        console.log('Profile created successfully for user:', userId);
+        return true;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error ensuring user profile:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          setUser(session?.user ?? null);
+          setIsLoading(false);
+        }
+
+        // Ensure profile exists but don't block the initial render
+        if (session?.user) {
+          ensureUserProfile(session.user.id, session.user.email).catch(console.error);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setIsLoading(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (mounted) {
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
+
+      // Ensure profile exists for new signups/logins
+      if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+        ensureUserProfile(session.user.id, session.user.email).catch(console.error);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (userData: { firstName: string; lastName: string; email: string; password: string }) => {
     setIsLoading(true);
     try {
-      console.log('🔍 STEP 1: Starting signup for:', userData.email);
+      console.log('🔍 Starting signup for:', userData.email);
       
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
@@ -43,54 +117,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (error) {
-        console.error('❌ STEP 2: Auth error:', error);
+        console.error('❌ Auth error:', error);
         throw error;
       }
       
-      console.log('✅ STEP 3: Auth successful! User ID:', data.user?.id);
+      console.log('✅ Auth successful! User ID:', data.user?.id);
       
-      // Create user profile in your profiles table
+      // Create user profile
       if (data.user) {
-        console.log('🔍 STEP 4: Attempting to create profile...');
-        
-        const profileData = { 
-          id: data.user.id, 
-          first_name: userData.firstName, 
-          last_name: userData.lastName,
-          email: userData.email
-        };
-        
-        console.log('📝 STEP 5: Profile data:', profileData);
-
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([profileData]);
-
-        if (profileError) {
-          console.error('❌ STEP 6: Profile creation FAILED:', profileError);
-          console.error('❌ Error message:', profileError.message);
-          console.error('❌ Error details:', profileError.details);
-          console.error('❌ Error hint:', profileError.hint);
-          
-          // Don't throw error - continue with signup even if profile fails
-          console.log('⚠️ Continuing signup without profile...');
-        } else {
-          console.log('✅ STEP 7: Profile created SUCCESSFULLY!');
-        }
-
-        // Verify the profile was created regardless of errors
-        const { data: verifyProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-          
-        console.log('🔍 STEP 8: Profile verification:', verifyProfile ? 'SUCCESS' : 'FAILED');
+        await ensureUserProfile(
+          data.user.id, 
+          data.user.email, 
+          userData.firstName, 
+          userData.lastName
+        );
       }
 
       return true;
     } catch (error) {
-      console.error('❌ FINAL ERROR:', error);
+      console.error('❌ Complete signup error:', error);
       return false;
     } finally {
       setIsLoading(false);
@@ -106,6 +151,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       if (error) throw error;
+
+      // Ensure profile exists for this user (non-blocking)
+      if (data.user) {
+        ensureUserProfile(data.user.id, data.user.email).catch(console.error);
+      }
+
       return true;
     } catch (error) {
       console.error('Login error:', error);
