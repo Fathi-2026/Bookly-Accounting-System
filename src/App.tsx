@@ -65,6 +65,7 @@ const ReportsWrapper = () => {
 
 // Main Layout
 
+// Main Layout
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
   
@@ -92,6 +93,22 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
                 </button>
               </div>
             </div>
+          </div>
+        </header>
+
+        {/* Mobile Header with Logout */}
+        <header className="lg:hidden bg-white shadow-sm border-b p-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Finance Tracker</h1>
+              <p className="text-sm text-gray-600">Welcome, {user?.firstName}!</p>
+            </div>
+            <button
+              onClick={logout}
+              className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+            >
+              Logout
+            </button>
           </div>
         </header>
 
