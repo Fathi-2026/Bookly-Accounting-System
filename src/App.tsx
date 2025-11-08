@@ -64,14 +64,18 @@ const ReportsWrapper = () => {
 };
 
 // Main Layout
+
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
   
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex-1 lg:ml-64">
-        <header className="bg-white shadow-sm border-b">
+      
+      {/* Main content area */}
+      <div className="lg:ml-64 min-h-screen">
+        {/* Desktop Header */}
+        <header className="hidden lg:block bg-white shadow-sm border-b">
           <div className="px-6 py-4">
             <div className="flex justify-between items-center">
               <div>
@@ -90,14 +94,15 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
         </header>
-        <main className="p-6">
+
+        {/* Main content with proper mobile padding */}
+        <main className="p-4 lg:p-6 w-full">
           {children}
         </main>
       </div>
     </div>
   );
 };
-
 // Protected Route
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
