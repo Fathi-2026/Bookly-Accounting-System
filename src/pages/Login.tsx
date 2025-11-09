@@ -13,12 +13,11 @@ export const Login = () => {
     e.preventDefault();
     setError('');
 
-    const success = await login(email, password);
-    
-    if (success) {
+    try {
+      await login(email, password);
       navigate('/');
-    } else {
-      setError('Invalid email or password. Please try again.');
+    } catch (error: any) {
+      setError(error.message || 'Invalid email or password. Please try again.');
     }
   };
 

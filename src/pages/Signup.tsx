@@ -35,12 +35,11 @@ export const Signup = () => {
       return;
     }
 
-    const success = await signup(formData);
-    
-    if (success) {
+    try {
+      await signup(formData);
       navigate('/');
-    } else {
-      setError('Failed to create account. This email might already be registered.');
+    } catch (error: any) {
+      setError(error.message || 'Failed to create account. This email might already be registered.');
     }
   };
 

@@ -1,3 +1,4 @@
+import { Upload } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Plus, List, BarChart3, DollarSign, Menu, X } from "lucide-react";
 import { cn } from "../lib/utils";
@@ -13,6 +14,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
   const navItems = [
     { to: "/", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/add-transaction", icon: Plus, label: "Add Transaction" },
+    { to: "/import-mpesa", icon: Upload, label: "M-Pesa Transactions" },  
     { to: "/transactions", icon: List, label: "Transactions" },
     { to: "/reports", icon: BarChart3, label: "Reports" },
   ];

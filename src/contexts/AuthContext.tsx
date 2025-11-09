@@ -4,8 +4,8 @@ import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (userData: { firstName: string; lastName: string; email: string; password: string }) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (userData: { firstName: string; lastName: string; email: string; password: string }) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -24,7 +24,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .from('profiles')
         .select('id')
         .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle to avoid throwing error if no profile
+        .maybeSingle();
 
       if (checkError) {
         console.error('Error checking profile:', checkError);
@@ -117,26 +117,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (error) {
-        console.error('❌ Auth error:', error);
-        throw error;
+        // Handle specific signup errors
+        if (error.message.includes('User already registered')) {
+          throw new Error('This email is already registered. Please sign in instead.');
+        } else if (error.message.includes('Invalid email')) {
+          throw new Error('Please enter a valid email address.');
+        } else if (error.message.includes('Password should be at least 6 characters')) {
+          throw new Error('Password must be at least 6 characters long.');
+        } else {
+          throw new Error('Signup failed. Please try again.');
+        }
       }
       
       console.log('✅ Auth successful! User ID:', data.user?.id);
       
       // Create user profile
       if (data.user) {
-        await ensureUserProfile(
+        const profileCreated = await ensureUserProfile(
           data.user.id, 
           data.user.email, 
           userData.firstName, 
           userData.lastName
         );
+        
+        if (!profileCreated) {
+          console.warn('⚠️ Profile creation failed, but user was created');
+        }
       }
-
-      return true;
     } catch (error) {
       console.error('❌ Complete signup error:', error);
-      return false;
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -150,17 +160,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         password,
       });
       
-      if (error) throw error;
-
-      // Ensure profile exists for this user (non-blocking)
-      if (data.user) {
-        ensureUserProfile(data.user.id, data.user.email).catch(console.error);
+      if (error) {
+        // Handle specific error types
+        if (error.message.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password. Please try again.');
+        } else if (error.message.includes('Email not confirmed')) {
+          throw new Error('Please verify your email address before signing in.');
+        } else if (error.message.includes('Invalid email')) {
+          throw new Error('Please enter a valid email address.');
+        } else {
+          throw new Error('Login failed. Please try again.');
+        }
       }
 
-      return true;
+      // Ensure profile exists for this user
+      if (data.user) {
+        await ensureUserProfile(data.user.id, data.user.email);
+      }
     } catch (error) {
       console.error('Login error:', error);
-      return false;
+      throw error;
     } finally {
       setIsLoading(false);
     }
