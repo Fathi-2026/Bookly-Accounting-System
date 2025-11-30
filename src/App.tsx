@@ -1,3 +1,4 @@
+import { Budgets } from "@/components/Budgets";
 import { ImportMpesa } from "@/components/ImportMpesa";
 import { AddTransaction } from "@/components/AddTransaction";
 import { EditTransaction } from "@/components/EditTransaction";
@@ -30,6 +31,10 @@ const AddTransactionWrapper = () => {
 const ImportMpesaWrapper = () => {
   return <ImportMpesa />;
 };
+const BudgetsWrapper = () => {
+  return <Budgets />;
+};
+
 
 const EditTransactionWrapper = () => {
   const { transactions, categories, updateTransaction, isLoading } = useTransactions();
@@ -155,6 +160,7 @@ const AppRoutes = () => {
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
       <Route path="/add-transaction" element={<ProtectedRoute><AddTransactionWrapper /></ProtectedRoute>} />
       <Route path="/import-mpesa" element={<ProtectedRoute><ImportMpesaWrapper /></ProtectedRoute>} /> 
+      <Route path="/budgets" element={<ProtectedRoute><BudgetsWrapper /></ProtectedRoute>} />
       <Route path="/edit-transaction/:id" element={<ProtectedRoute><EditTransactionWrapper /></ProtectedRoute>} />
       <Route path="/transactions" element={<ProtectedRoute><TransactionsTableWrapper /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><ReportsWrapper /></ProtectedRoute>} />
