@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -91,6 +90,20 @@
 
   body {
     @apply bg-background text-foreground font-sans;
+  }
+
+  /* Fix for sidebar layout */
+  .sidebar-layout {
+    @apply flex min-h-screen;
+  }
+
+  .sidebar-main {
+    @apply flex-1 ml-0 md:ml-64 transition-all duration-300;
+  }
+
+  /* Ensure main content doesn't get covered */
+  .main-content {
+    @apply w-full max-w-full overflow-x-hidden;
   }
 }
 

@@ -8,13 +8,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom"; // ← CHANGED TO HashRouter
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { useTransactions } from "./hooks/useTransactions";
 import Index from "./pages/Index";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { Sidebar } from "@/components/Sidebar";
+import { HomePage } from "./pages/HomePage";
 
 const queryClient = new QueryClient();
 
@@ -28,13 +29,14 @@ const AddTransactionWrapper = () => {
   
   return <AddTransaction onAddTransaction={addTransaction} categories={categories} />;
 };
+
 const ImportMpesaWrapper = () => {
   return <ImportMpesa />;
 };
+
 const BudgetsWrapper = () => {
   return <Budgets />;
 };
-
 
 const EditTransactionWrapper = () => {
   const { transactions, categories, updateTransaction, isLoading } = useTransactions();
@@ -72,18 +74,17 @@ const ReportsWrapper = () => {
   return <Reports transactions={transactions} categories={categories} />;
 };
 
-// Main Layout
-
-// Main Layout
+// Main Layout - FIXED VERSION
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
   
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Sidebar - NO EXTRA WRAPPER needed since Sidebar has its own fixed positioning */}
       <Sidebar />
       
-      {/* Main content area */}
-      <div className="lg:ml-64 min-h-screen">
+      {/* Main content area - CHANGED to lg:ml-72 to match sidebar width */}
+      <div className="ml-0 lg:ml-72 min-h-screen">
         {/* Desktop Header */}
         <header className="hidden lg:block bg-white shadow-sm border-b">
           <div className="px-6 py-4">
@@ -129,6 +130,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
     </div>
   );
 };
+
 // Protected Route
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
@@ -140,7 +142,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return user ? <MainLayout>{children}</MainLayout> : <Navigate to="/login" replace />;
 };
 
-// Public Route
+// Public Route - FIXED: Redirect to "/" (Index) instead of "/dashboard"
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth();
   
@@ -148,16 +150,19 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
   
-  return !user ? <>{children}</> : <Navigate to="/" replace />;
+  return !user ? <>{children}</> : <Navigate to="/" replace />; // ← CHANGED BACK TO "/"
 };
 
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* Public Routes */}
+      <Route path="/home" element={<HomePage />} /> {/* ← CHANGED FROM "/" TO "/home" */}
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
       
-      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+      {/* Protected Routes */}
+      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} /> {/* ← MAIN APP AT ROOT */}
       <Route path="/add-transaction" element={<ProtectedRoute><AddTransactionWrapper /></ProtectedRoute>} />
       <Route path="/import-mpesa" element={<ProtectedRoute><ImportMpesaWrapper /></ProtectedRoute>} /> 
       <Route path="/budgets" element={<ProtectedRoute><BudgetsWrapper /></ProtectedRoute>} />
@@ -177,7 +182,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <HashRouter> {/* ← CHANGED TO HashRouter */}
+          <HashRouter>
             <AppRoutes />
           </HashRouter>
         </TooltipProvider>
